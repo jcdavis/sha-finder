@@ -4,11 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-char* str = "asdfjk;lhqwd08uawef09uzaqnjklwef;kanjsfnjo;qwf034t8aedfmkl;qkl;jawelnkascl;knwe;fjklnwfo;34t90j";
-char* str2 = "0123456789012345678901234567890123456789";
-
-char* random_data;
-
 typedef void* (*init_fn)(void);
 typedef bool (*sha_contains_fn)(const char* buf, int len, void* data);
 typedef void (*cleanup_fn)(void*);
@@ -44,6 +39,7 @@ bool contains_regex(const char* str, int len, void* data) {
 }
 
 void cleanup_regex(void* data) {
+  //TODO
 }
 
 impl_t regex_impl = {init_regex, contains_regex, cleanup_regex, "PCRE-JIT"};
@@ -88,6 +84,7 @@ bool contains_table(const char* str, int len, void* data) {
 }
 
 void cleanup_table(void* data) {
+ //TODO
 }
 
 impl_t branchfreelut_impl = {init_table, contains_table, cleanup_table, "BranchfreeLUT"};
@@ -149,7 +146,7 @@ static char* generate_ascii(int len) {
 
 int main(int argc, char** argv) {
   const int len = 1024*1024*1024;
-  random_data = generate_ascii(len);
+  const char* random_data = generate_ascii(len);
   //char* random_data = str2;
   //const int len = strlen(str2);
   
