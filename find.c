@@ -1,7 +1,10 @@
+#include <immintrin.h>
+#include <inttypes.h>
 #include <pcre.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <tmmintrin.h>
 #include <time.h>
 
 typedef void* (*init_fn)(void);
@@ -108,6 +111,76 @@ bool contains_BM(const char* str, int len, void* data) {
 
 impl_t boyermoore_impl = {init_table, contains_BM, cleanup_table, "Boyer-Moore"};
 
+typedef struct {
+  __m256i doublemask;
+  __m256i doubleshift;
+  const char* table;
+} vector_data;
+
+void* init_vectorized() {
+  vector_data* data;
+  posix_memalign((void**)&data, 32, sizeof(vector_data));
+  data->table = (const char*)init_table();
+  const __m128i mask = _mm_setr_epi8(
+    0b00001000,
+    0b01011000, 0b01011000, 0b01011000, 0b01011000, 0b01011000, 0b01011000,
+    0b00001000, 0b00001000, 0b00001000,
+    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000
+  );
+  const __m128i shift = _mm_setr_epi8(
+    0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  );
+  data->doublemask = _mm256_broadcastsi128_si256(mask);
+  data->doubleshift = _mm256_broadcastsi128_si256(shift);
+  return data; 
+}
+
+uint32_t check_vector(const __m256i data, const __m256i doublemask, const __m256i doubleshift) {
+  /*const __m128i mask = _mm_setr_epi8(
+    0b00001000,
+    0b01011000, 0b01011000, 0b01011000, 0b01011000, 0b01011000, 0b01011000,
+    0b00001000, 0b00001000, 0b00001000,
+    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000
+  );
+  const __m128i shift = _mm_setr_epi8(
+    0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  );
+  const __m256i doublemask = _mm256_broadcastsi128_si256(mask);
+  const __m256i doubleshift = _mm256_broadcastsi128_si256(shift);*/
+
+  __m256i hi_nibble = _mm256_srli_epi32(data, 4) & _mm256_set1_epi8(0x0f);
+  __m256i lo_nibble = data & _mm256_set1_epi8(0x0f);
+  __m256i masks = _mm256_shuffle_epi8(doublemask, lo_nibble);
+  __m256i shifted_bits = _mm256_shuffle_epi8(doubleshift, hi_nibble);
+  __m256i matches = _mm256_cmpeq_epi8(_mm256_and_si256(masks, shifted_bits), _mm256_setzero_si256());
+  return _mm256_movemask_epi8(matches);
+}
+
+bool contains_vectorized(const char* str, int len, void* data) {
+  const vector_data* vd = (const vector_data*)data;
+  int pos = 0, run = 0;
+  while(pos + sizeof(__m256i) < len) {
+    uint32_t bits = check_vector(_mm256_loadu_si256((__m256i*)(str+pos)),
+      vd->doublemask, vd->doubleshift);
+    run += _tzcnt_u32(bits);
+    if (run >= 40)
+      return true;
+    if (bits != 0)
+      run = _lzcnt_u32(bits);
+    pos += sizeof(__m256i);
+  }
+  //Finish the remaining charracters
+  while(pos < len) {
+    run = (run - vd->table[str[pos]])&vd->table[str[pos]];
+    if (run == 40)
+      return true;
+    pos++;
+  }
+  return false;
+}
+
+impl_t vectorized_impl = {init_vectorized, contains_vectorized, cleanup_table, "Vectorized"};
+
 static long timediff(struct timespec start, struct timespec end) {
   struct timespec temp;
   if ((end.tv_nsec - start.tv_nsec) < 0) {
@@ -147,11 +220,10 @@ static char* generate_ascii(int len) {
 int main(int argc, char** argv) {
   const int len = 1024*1024*1024;
   const char* random_data = generate_ascii(len);
-  //char* random_data = str2;
-  //const int len = strlen(str2);
   
   time_impl(&regex_impl, random_data, len);
   time_impl(&branchfreelut_impl, random_data, len);
   time_impl(&boyermoore_impl, random_data, len);
+  time_impl(&vectorized_impl, random_data, len);
   return 0;
 }
