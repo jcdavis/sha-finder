@@ -12,19 +12,19 @@ typedef bool (*sha_contains_fn)(const char* buf, int len, void* data);
 typedef void (*cleanup_fn)(void*);
 
 typedef struct {
-  init_fn init;
-  sha_contains_fn contains;
-  cleanup_fn cleanup;
+  const init_fn init;
+  const sha_contains_fn contains;
+  const cleanup_fn cleanup;
   const char* name;
 } impl_t;
 
 typedef struct {
-pcre* re;
-const char* re_error;
-int re_error_offset;
-pcre_extra* re_extra;
-pcre_jit_stack* jit_stack;
-int ovector[30];
+  pcre* re;
+  const char* re_error;
+  int re_error_offset;
+  pcre_extra* re_extra;
+  pcre_jit_stack* jit_stack;
+  int ovector[30];
 } regex_data;
 
 void* init_regex() {
@@ -90,6 +90,7 @@ void cleanup_table(void* data) {
  //TODO
 }
 
+impl_t baseline_impl = {init_table, contains_sha, cleanup_table, "Baseline loop"};
 impl_t branchfreelut_impl = {init_table, contains_table, cleanup_table, "BranchfreeLUT"};
 
 const int shalen = 40;
@@ -181,6 +182,28 @@ bool contains_vectorized(const char* str, int len, void* data) {
 
 impl_t vectorized_impl = {init_vectorized, contains_vectorized, cleanup_table, "Vectorized"};
 
+bool contains_vectorized_BM(const char* str, int len, void* data) {
+  const vector_data* vd = (const vector_data*)data;
+  int i = shalen-1;
+  while(i < len) {
+    uint32_t bits = check_vector(_mm256_loadu_si256((__m256i*)(str+i-sizeof(__m256i))),
+      vd->doublemask, vd->doubleshift);
+    int lzcnt = _lzcnt_u32(bits);
+    i -= lzcnt;
+    if (lzcnt == 32) {
+      int start = i-7; 
+      while(i >= start && vd->table[str[i]] != 0)
+        i--;
+      if (i < start)
+        return true;
+    }
+    i += shalen;
+  }
+  return false;
+}
+
+impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, cleanup_table, "Vectorized-BM"};
+
 static long timediff(struct timespec start, struct timespec end) {
   struct timespec temp;
   if ((end.tv_nsec - start.tv_nsec) < 0) {
@@ -221,9 +244,11 @@ int main(int argc, char** argv) {
   const int len = 1024*1024*1024;
   const char* random_data = generate_ascii(len);
   
+  time_impl(&baseline_impl, random_data, len);
   time_impl(&regex_impl, random_data, len);
   time_impl(&branchfreelut_impl, random_data, len);
   time_impl(&boyermoore_impl, random_data, len);
   time_impl(&vectorized_impl, random_data, len);
+  time_impl(&vectorized_bm_impl, random_data, len);
   return 0;
 }
