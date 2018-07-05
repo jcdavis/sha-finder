@@ -7,6 +7,8 @@
 #include <tmmintrin.h>
 #include <time.h>
 
+#include <cre2.h>
+
 typedef void* (*init_fn)(void);
 typedef bool (*sha_contains_fn)(const char* buf, int len, void* data);
 typedef void (*cleanup_fn)(void*);
@@ -46,6 +48,13 @@ void cleanup_regex(void* data) {
 }
 
 impl_t regex_impl = {init_regex, contains_regex, cleanup_regex, "PCRE-JIT"};
+
+bool contains_cre2(const char* str, int len, void* data) {
+  cre2_regexp_t* rex = cre2_new("[a-fA-F0-9]{40}", 15, cre2_opt_new());
+  return cre2_match(rex, str, len, 0, len, CRE2_UNANCHORED, NULL, 0);
+}
+
+impl_t cre2_impl = {init_regex, contains_cre2, cleanup_regex, "CRE2"};
 
 bool contains_sha(const char* str, int len, void* data) {
   int run = 0;
@@ -245,6 +254,7 @@ int main(int argc, char** argv) {
   const char* random_data = generate_ascii(len);
   
   time_impl(&baseline_impl, random_data, len);
+  time_impl(&cre2_impl, random_data, len);
   time_impl(&regex_impl, random_data, len);
   time_impl(&branchfreelut_impl, random_data, len);
   time_impl(&boyermoore_impl, random_data, len);
