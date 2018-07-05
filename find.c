@@ -49,12 +49,14 @@ void cleanup_regex(void* data) {
 
 impl_t regex_impl = {init_regex, contains_regex, cleanup_regex, "PCRE-JIT"};
 
+void* init_cre2() {
+  return (void*)cre2_new("[a-fA-F0-9]{40}", 15, cre2_opt_new());
+}
 bool contains_cre2(const char* str, int len, void* data) {
-  cre2_regexp_t* rex = cre2_new("[a-fA-F0-9]{40}", 15, cre2_opt_new());
-  return cre2_match(rex, str, len, 0, len, CRE2_UNANCHORED, NULL, 0);
+  return cre2_match((cre2_regexp_t*)data, str, len, 0, len, CRE2_UNANCHORED, NULL, 0);
 }
 
-impl_t cre2_impl = {init_regex, contains_cre2, cleanup_regex, "CRE2"};
+impl_t cre2_impl = {init_cre2, contains_cre2, cleanup_regex, "CRE2"};
 
 bool contains_sha(const char* str, int len, void* data) {
   int run = 0;
