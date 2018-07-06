@@ -155,7 +155,7 @@ uint32_t check_vector(const __m256i data, const __m256i doublemask, const __m256
 bool contains_vectorized(const char* str, int len, void* data) {
   const vector_data* vd = (const vector_data*)data;
   int pos = 0, run = 0;
-  while(pos + sizeof(__m256i) < len) {
+  while(pos + 32 < len) {
     uint32_t bits = check_vector(_mm256_loadu_si256((__m256i*)(str+pos)),
       vd->doublemask, vd->doubleshift);
     run += _tzcnt_u32(bits);
@@ -163,7 +163,7 @@ bool contains_vectorized(const char* str, int len, void* data) {
       return true;
     if (bits != 0)
       run = _lzcnt_u32(bits);
-    pos += sizeof(__m256i);
+    pos += 32;
   }
   //Finish the remaining charracters
   while(pos < len) {
