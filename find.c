@@ -1,6 +1,7 @@
 #include <immintrin.h>
 #include <inttypes.h>
 #include <pcre.h>
+#include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,10 +28,10 @@ typedef struct {
   pcre_extra* re_extra;
   pcre_jit_stack* jit_stack;
   int ovector[30];
-} regex_data;
+} pcre_data;
 
-void* init_regex() {
-  regex_data* data = malloc(sizeof(regex_data));
+void* init_pcre() {
+  pcre_data* data = malloc(sizeof(pcre_data));
   data->re = pcre_compile("[a-fA-F0-9]{40}", 0, &data->re_error, &data->re_error_offset, NULL);
   data->re_extra = pcre_study(data->re, PCRE_STUDY_JIT_COMPILE, &data->re_error);
   data->jit_stack = pcre_jit_stack_alloc(32*1024, 512*1024);
@@ -38,16 +39,28 @@ void* init_regex() {
   return (void*)data;
 }
 
-bool contains_regex(const char* str, int len, void* data) {
-  regex_data* rd = (regex_data*)data;
+bool contains_pcre(const char* str, int len, void* data) {
+  pcre_data* rd = (pcre_data*)data;
   return pcre_jit_exec(rd->re, rd->re_extra, str, len, 0, 0, rd->ovector, 30, rd->jit_stack) >= 0; 
 }
 
-void cleanup_regex(void* data) {
+void cleanup_pcre(void* data) {
   //TODO
 }
 
-impl_t regex_impl = {init_regex, contains_regex, cleanup_regex, "PCRE-JIT"};
+impl_t pcre_impl = {init_pcre, contains_pcre, cleanup_pcre, "PCRE-JIT"};
+
+void* init_gnu_regex() {
+  regex_t* compiled = malloc(sizeof(regex_t));
+  regcomp(compiled, "[a-fA-F0-9]{40}", REG_EXTENDED);
+  return (void*)compiled;
+}
+
+bool contains_gnu_regex(const char* str, int len, void* data) {
+  return !regexec((const regex_t*)data, str, 0, NULL, 0);
+}
+
+impl_t gnu_regex_impl = {init_gnu_regex, contains_gnu_regex, cleanup_pcre, "GNUREGEX"};
 
 void* init_cre2() {
   return (void*)cre2_new("[a-fA-F0-9]{40}", 15, cre2_opt_new());
@@ -56,7 +69,7 @@ bool contains_cre2(const char* str, int len, void* data) {
   return cre2_match((cre2_regexp_t*)data, str, len, 0, len, CRE2_UNANCHORED, NULL, 0);
 }
 
-impl_t cre2_impl = {init_cre2, contains_cre2, cleanup_regex, "CRE2"};
+impl_t cre2_impl = {init_cre2, contains_cre2, cleanup_pcre, "CRE2"};
 
 bool contains_sha(const char* str, int len, void* data) {
   int run = 0;
@@ -257,7 +270,8 @@ int main(int argc, char** argv) {
   
   time_impl(&baseline_impl, random_data, len);
   time_impl(&cre2_impl, random_data, len);
-  time_impl(&regex_impl, random_data, len);
+  time_impl(&pcre_impl, random_data, len);
+  time_impl(&gnu_regex_impl, random_data, len);
   time_impl(&branchfreelut_impl, random_data, len);
   time_impl(&boyermoore_impl, random_data, len);
   time_impl(&vectorized_impl, random_data, len);
