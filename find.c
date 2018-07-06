@@ -41,11 +41,11 @@ bool contains_regex(const char* str, int len, void* data) {
   return pcre_jit_exec(rd->re, rd->re_extra, str, len, 0, 0, rd->ovector, 30, rd->jit_stack) >= 0; 
 }
 
-void cleanup_regex(void* data) {
+void noop_cleanup(void* data) {
   //TODO
 }
 
-impl_t regex_impl = {init_regex, contains_regex, cleanup_regex, "PCRE-JIT"};
+impl_t regex_impl = {init_regex, contains_regex, noop_cleanup, "PCRE-JIT"};
 
 bool contains_sha(const char* str, int len, void* data) {
   int run = 0;
@@ -64,8 +64,7 @@ bool contains_sha(const char* str, int len, void* data) {
 
 void* init_table() {
   char* table = malloc(256);
-  for(int i = 0; i < 256; i++)
-    table[i] = 0;
+  memset(table, 0, 256);
   for(char c = 'a'; c <= 'f'; c++)
     table[c] = 0xff;
   for(char c = 'A'; c <= 'F'; c++)
@@ -86,12 +85,8 @@ bool contains_table(const char* str, int len, void* data) {
   return false;
 }
 
-void cleanup_table(void* data) {
- //TODO
-}
-
-impl_t baseline_impl = {init_table, contains_sha, cleanup_table, "Baseline loop"};
-impl_t branchfreelut_impl = {init_table, contains_table, cleanup_table, "BranchfreeLUT"};
+impl_t baseline_impl = {init_table, contains_sha, noop_cleanup, "Baseline loop"};
+impl_t branchfreelut_impl = {init_table, contains_table, noop_cleanup, "BranchfreeLUT"};
 
 const int shalen = 40;
 bool contains_BM(const char* str, int len, void* data) {
@@ -110,7 +105,7 @@ bool contains_BM(const char* str, int len, void* data) {
   return false;
 }
 
-impl_t boyermoore_impl = {init_table, contains_BM, cleanup_table, "Boyer-Moore"};
+impl_t boyermoore_impl = {init_table, contains_BM, noop_cleanup, "Boyer-Moore"};
 
 typedef struct {
   __m256i doublemask;
@@ -180,7 +175,7 @@ bool contains_vectorized(const char* str, int len, void* data) {
   return false;
 }
 
-impl_t vectorized_impl = {init_vectorized, contains_vectorized, cleanup_table, "Vectorized"};
+impl_t vectorized_impl = {init_vectorized, contains_vectorized, noop_cleanup, "Vectorized"};
 
 bool contains_vectorized_BM(const char* str, int len, void* data) {
   const vector_data* vd = (const vector_data*)data;
@@ -202,7 +197,7 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
   return false;
 }
 
-impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, cleanup_table, "Vectorized-BM"};
+impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, noop_cleanup, "Vectorized-BM"};
 
 static long timediff(struct timespec start, struct timespec end) {
   struct timespec temp;
