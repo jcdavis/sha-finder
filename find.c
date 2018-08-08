@@ -65,11 +65,11 @@ bool contains_sha(const char* str, int len, void* data) {
 void* init_table() {
   char* table = malloc(256);
   memset(table, 0, 256);
-  for(char c = 'a'; c <= 'f'; c++)
+  for(unsigned char c = 'a'; c <= 'f'; c++)
     table[c] = 0xff;
-  for(char c = 'A'; c <= 'F'; c++)
+  for(unsigned char c = 'A'; c <= 'F'; c++)
     table[c] = 0xff;
-  for(char c = '0'; c <= '9'; c++)
+  for(unsigned char c = '0'; c <= '9'; c++)
     table[c] = 0xff;
   return (void*)table;
 }
@@ -78,7 +78,7 @@ bool contains_table(const char* str, int len, void* data) {
   const char* table = (const char*)data;
   char run = 0;
   for(int i = 0; i < len; i++) {
-    run = (run - table[str[i]])&table[str[i]];
+    run = (run - table[(unsigned char)str[i]])&table[(unsigned char)str[i]];
     if (run == 40)
       return true;
   }
@@ -93,9 +93,9 @@ bool contains_BM(const char* str, int len, void* data) {
   const char* table = (const char*)data;
   int i = shalen-1;
   while(i < len) {
-    if (table[str[i]] != 0) {
+    if (table[(unsigned char)str[i]] != 0) {
       int start = i-(shalen-1);
-      while(i >= start && table[str[i]] != 0)
+      while(i >= start && table[(unsigned char)str[i]] != 0)
         i--;
       if (i < start)
         return true;
@@ -167,7 +167,7 @@ bool contains_vectorized(const char* str, int len, void* data) {
   }
   //Finish the remaining charracters
   while(pos < len) {
-    run = (run - vd->table[str[pos]])&vd->table[str[pos]];
+    run = (run - vd->table[(unsigned char)str[pos]])&vd->table[(unsigned char)str[pos]];
     if (run == 40)
       return true;
     pos++;
@@ -187,7 +187,7 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
     i -= lzcnt;
     if (lzcnt == 32) {
       int start = i-7; 
-      while(i >= start && vd->table[str[i]] != 0)
+      while(i >= start && vd->table[(unsigned char)str[i]] != 0)
         i--;
       if (i < start)
         return true;
