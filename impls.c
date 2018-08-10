@@ -7,16 +7,7 @@
 #include <tmmintrin.h>
 #include <time.h>
 
-typedef void* (*init_fn)(void);
-typedef bool (*sha_contains_fn)(const char* buf, int len, void* data);
-typedef void (*cleanup_fn)(void*);
-
-typedef struct {
-  const init_fn init;
-  const sha_contains_fn contains;
-  const cleanup_fn cleanup;
-  const char* name;
-} impl_t;
+#include "find.h"
 
 typedef struct {
   pcre* re;
@@ -199,50 +190,5 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
 
 const impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, noop_cleanup, "Vectorized-BM"};
 
-static long timediff(struct timespec start, struct timespec end) {
-  struct timespec temp;
-  if ((end.tv_nsec - start.tv_nsec) < 0) {
-    temp.tv_sec = end.tv_sec - start.tv_sec - 1;
-    temp.tv_nsec = 1000000000L + end.tv_nsec - start.tv_nsec;
-  } else {
-    temp.tv_sec = end.tv_sec - start.tv_sec;
-    temp.tv_nsec = end.tv_nsec - start.tv_nsec;
-  }
-  return temp.tv_sec * 1000000000L + temp.tv_nsec;
-}
-
-long time_impl(const impl_t* impl, const char* string, int len) {
-  struct timespec start, end;
-  void* data = impl->init();
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  bool res = impl->contains(string, len, data);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  long diff = timediff(start, end);
-  printf("%s %d %ld\n", impl->name, res, diff);
-  impl->cleanup(data);
-  return diff;
-}
-
-static char* generate_ascii(int len) {
-  char* res = (char*)malloc(len);
-  char start = ' ', end = '~';
-  for(int i = 0; i < len; i++) {
-    res[i] = (char)(start + (rand()%(end+1-start)));
-  }
-  /*for(int i = len-40; i < len; i++) {
-    res[i] = '0';
-  }*/
-  return res;
-}
-
 const impl_t* impls[] = {&baseline_impl, &regex_impl, &branchfreelut_impl, &boyermoore_impl, &vectorized_impl, &vectorized_bm_impl};
 const int num_impls = sizeof(impls) / sizeof(impl_t*);
-
-int main(int argc, char** argv) {
-  const int len = 1024*1024*1024;
-  const char* random_data = generate_ascii(len);
-  
-  for (int i = 0; i < num_impls; i++)
-    time_impl(impls[i], random_data, len);
-  return 0;
-}
