@@ -1,13 +1,10 @@
-#include <immintrin.h>
 #include <inttypes.h>
-#include <pcre.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
-#include <tmmintrin.h>
+#include <stdlib.h>
 #include <time.h>
 
-#include "find.h"
+#include "impls.h"
 
 static long timediff(struct timespec start, struct timespec end) {
   struct timespec temp;

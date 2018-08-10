@@ -2,12 +2,10 @@
 #include <inttypes.h>
 #include <pcre.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 #include <tmmintrin.h>
-#include <time.h>
 
-#include "find.h"
+#include "impls.h"
 
 typedef struct {
   pcre* re;

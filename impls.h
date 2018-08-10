@@ -1,3 +1,6 @@
+#ifndef _IMPLS_H_
+#define _IMPLS_H_
+
 typedef void* (*init_fn)(void);
 typedef bool (*sha_contains_fn)(const char* buf, int len, void* data);
 typedef void (*cleanup_fn)(void*);
@@ -11,3 +14,5 @@ typedef struct {
 
 extern const impl_t* impls[];
 extern const int num_impls;
+
+#endif
