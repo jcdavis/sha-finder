@@ -170,7 +170,7 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
   const vector_data* vd = (const vector_data*)data;
   int i = shalen-1;
   while(i < len) {
-    uint32_t bits = check_vector(_mm256_loadu_si256((__m256i*)(str+i-sizeof(__m256i))),
+    uint32_t bits = check_vector(_mm256_loadu_si256((__m256i*)(str+i+1-sizeof(__m256i))),
       vd->doublemask, vd->doubleshift);
     int lzcnt = _lzcnt_u32(bits);
     i -= lzcnt;
