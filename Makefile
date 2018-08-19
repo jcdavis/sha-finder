@@ -5,7 +5,13 @@ benchmark:
 	mkdir -p build
 	$(CC) $(BASE_CCOPTS) -o build/sha-finder-benchmark impls.c benchmark.c $(LIB_OPTS)
 	build/sha-finder-benchmark
+ifeq ($(CC),clang)
+  SAN_OPTS=-fsanitize=memory -fsanitize=undefined
+else
+  SAN_OPTS=
+endif
+
 tests:
 	mkdir -p build
-	$(CC) $(BASE_CCOPTS) -fsanitize=memory -fsanitize=undefined -o build/tests impls.c tests.c $(LIB_OPTS)
+	$(CC) $(BASE_CCOPTS) $(SAN_OPTS) -o build/tests impls.c tests.c $(LIB_OPTS)
 	build/tests
