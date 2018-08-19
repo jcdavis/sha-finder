@@ -66,7 +66,7 @@ void* init_table() {
 
 bool contains_table(const char* str, int len, void* data) {
   const char* table = (const char*)data;
-  char run = 0;
+  int run = 0;
   for(int i = 0; i < len; i++) {
     run = (run - table[(unsigned char)str[i]])&table[(unsigned char)str[i]];
     if (run == 40)
