@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <immintrin.h>
 #include <inttypes.h>
 #include <pcre.h>
@@ -104,7 +105,7 @@ typedef struct {
 
 void* init_vectorized() {
   vector_data* data;
-  posix_memalign((void**)&data, 32, sizeof(vector_data));
+  assert(posix_memalign((void**)&data, 32, sizeof(vector_data)) == 0);
   data->table = (const char*)init_table();
   const __m128i mask = _mm_setr_epi8(
     0b00001000,
