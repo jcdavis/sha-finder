@@ -68,6 +68,19 @@ bool contains_table(const char* str, int len, void* data) {
   const char* table = (const char*)data;
   int run = 0;
   for(int i = 0; i < len; i++) {
+    if (table[(unsigned char)str[i]] != 0)
+      run++;
+    else
+      run = 0;
+    if (run == 40)
+      return true;
+  }
+  return false;
+}
+bool contains_table_branchfree(const char* str, int len, void* data) {
+  const char* table = (const char*)data;
+  int run = 0;
+  for(int i = 0; i < len; i++) {
     run = (run - table[(unsigned char)str[i]])&table[(unsigned char)str[i]];
     if (run == 40)
       return true;
@@ -76,7 +89,8 @@ bool contains_table(const char* str, int len, void* data) {
 }
 
 const impl_t baseline_impl = {init_table, contains_sha, noop_cleanup, "Baseline loop"};
-const impl_t branchfreelut_impl = {init_table, contains_table, noop_cleanup, "BranchfreeLUT"};
+const impl_t lut_impl = {init_table, contains_table, noop_cleanup, "LUT"};
+const impl_t branchfreelut_impl = {init_table, contains_table_branchfree, noop_cleanup, "BranchfreeLUT"};
 
 const int shalen = 40;
 bool contains_BM(const char* str, int len, void* data) {
@@ -189,5 +203,5 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
 
 const impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, noop_cleanup, "Vectorized-BM"};
 
-const impl_t* impls[] = {&baseline_impl, &regex_impl, &branchfreelut_impl, &boyermoore_impl, &vectorized_impl, &vectorized_bm_impl};
+const impl_t* impls[] = {&baseline_impl, &regex_impl, &lut_impl, &branchfreelut_impl, &boyermoore_impl, &vectorized_impl, &vectorized_bm_impl};
 const int num_impls = sizeof(impls) / sizeof(impl_t*);
