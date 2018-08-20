@@ -6,7 +6,7 @@ benchmark:
 	$(CC) $(BASE_CCOPTS) -o build/sha-finder-benchmark impls.c benchmark.c $(LIB_OPTS)
 	build/sha-finder-benchmark
 ifeq ($(CC),clang)
-  SAN_OPTS=-fsanitize=memory -fsanitize=undefined
+  SAN_OPTS=-fsanitize=address -fsanitize=undefined
 else
   SAN_OPTS=
 endif

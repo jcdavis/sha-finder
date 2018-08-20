@@ -31,11 +31,15 @@ bool contains_regex(const char* str, int len, void* data) {
   return pcre_jit_exec(rd->re, rd->re_extra, str, len, 0, 0, rd->ovector, 30, rd->jit_stack) >= 0; 
 }
 
-void noop_cleanup(void* data) {
-  //TODO
+void regex_cleanup(void* data) {
+  regex_data* rd = (regex_data*)data;
+  pcre_free(rd->re);
+  pcre_free_study(rd->re_extra);
+  pcre_jit_stack_free(rd->jit_stack);
+  free(rd);
 }
 
-const impl_t regex_impl = {init_regex, contains_regex, noop_cleanup, "PCRE-JIT"};
+const impl_t regex_impl = {init_regex, contains_regex, regex_cleanup, "PCRE-JIT"};
 
 bool contains_sha(const char* str, int len, void* data) {
   int run = 0;
@@ -64,6 +68,10 @@ void* init_table() {
   return (void*)table;
 }
 
+void cleanup_table(void* data) {
+  free(data);
+}
+
 bool contains_table(const char* str, int len, void* data) {
   const char* table = (const char*)data;
   int run = 0;
@@ -88,9 +96,9 @@ bool contains_table_branchfree(const char* str, int len, void* data) {
   return false;
 }
 
-const impl_t baseline_impl = {init_table, contains_sha, noop_cleanup, "Baseline loop"};
-const impl_t lut_impl = {init_table, contains_table, noop_cleanup, "LUT"};
-const impl_t branchfreelut_impl = {init_table, contains_table_branchfree, noop_cleanup, "BranchfreeLUT"};
+const impl_t baseline_impl = {init_table, contains_sha, cleanup_table, "Baseline loop"};
+const impl_t lut_impl = {init_table, contains_table, cleanup_table, "LUT"};
+const impl_t branchfreelut_impl = {init_table, contains_table_branchfree, cleanup_table, "BranchfreeLUT"};
 
 const int shalen = 40;
 bool contains_BM(const char* str, int len, void* data) {
@@ -109,7 +117,7 @@ bool contains_BM(const char* str, int len, void* data) {
   return false;
 }
 
-const impl_t boyermoore_impl = {init_table, contains_BM, noop_cleanup, "Boyer-Moore"};
+const impl_t boyermoore_impl = {init_table, contains_BM, cleanup_table, "Boyer-Moore"};
 
 typedef struct {
   __m256i doublemask;
@@ -133,6 +141,12 @@ void* init_vectorized() {
   data->doublemask = _mm256_broadcastsi128_si256(mask);
   data->doubleshift = _mm256_broadcastsi128_si256(shift);
   return data; 
+}
+
+void cleanup_vectorized(void* data) {
+  vector_data* vd = (vector_data*)data;
+  cleanup_table((void*)vd->table);
+  free(vd);
 }
 
 uint32_t check_vector(const __m256i data, const __m256i doublemask, const __m256i doubleshift) {
@@ -179,7 +193,7 @@ bool contains_vectorized(const char* str, int len, void* data) {
   return false;
 }
 
-const impl_t vectorized_impl = {init_vectorized, contains_vectorized, noop_cleanup, "Vectorized"};
+const impl_t vectorized_impl = {init_vectorized, contains_vectorized, cleanup_vectorized, "Vectorized"};
 
 bool contains_vectorized_BM(const char* str, int len, void* data) {
   const vector_data* vd = (const vector_data*)data;
@@ -201,7 +215,7 @@ bool contains_vectorized_BM(const char* str, int len, void* data) {
   return false;
 }
 
-const impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, noop_cleanup, "Vectorized-BM"};
+const impl_t vectorized_bm_impl = {init_vectorized, contains_vectorized_BM, cleanup_vectorized, "Vectorized-BM"};
 
 const impl_t* impls[] = {&baseline_impl, &regex_impl, &lut_impl, &branchfreelut_impl, &boyermoore_impl, &vectorized_impl, &vectorized_bm_impl};
 const int num_impls = sizeof(impls) / sizeof(impl_t*);
