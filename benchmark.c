@@ -6,6 +6,7 @@
 
 #include "impls.h"
 
+// Originally from https://github.com/regehr/nibble-sort/blob/master/test_nibble.c
 static long timediff(struct timespec start, struct timespec end) {
   struct timespec temp;
   if ((end.tv_nsec - start.tv_nsec) < 0) {
