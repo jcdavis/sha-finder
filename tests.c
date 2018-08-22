@@ -16,6 +16,7 @@ const test_case cases[] = {
   {"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true},
   {"abcdefABCDEF0123456789abcdefABCDEF012345", true},
   {"zabcdefABCDEF0123456789abcdefABCDEF012345", true},
+  {"zabcdefABCDEF0123456789abcdefABCDEF01234", false},
   {"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzabcdefABCDEF0123456789abcdefABCDEF012345", true}, // Check trailing from first 32
   {"\u00A3\uC97D", false}
 };

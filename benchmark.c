@@ -49,5 +49,6 @@ int main(int argc, char** argv) {
   
   for (int i = 0; i < num_impls; i++)
     time_impl(impls[i], random_data, len);
+  free((void*)random_data);
   return 0;
 }

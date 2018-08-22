@@ -4,7 +4,6 @@
 #include <pcre.h>
 #include <stdbool.h>
 #include <string.h>
-#include <tmmintrin.h>
 
 #include "impls.h"
 
